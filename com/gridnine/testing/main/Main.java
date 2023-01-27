@@ -6,9 +6,7 @@ import com.gridnine.testing.main.model.Segment;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 public class Main {
 
@@ -18,24 +16,26 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
         System.out.println("""
                 Выберите вариант:
-                1.Показать вылеты до текущего момента времени.\s
-                2.Показать имеются ли сегменты с датой прилёта раньше даты вылета.
-                3.Показать если общее время, проведённое на земле превышает два часа.""");
+                1.Исключить вылеты до текущего момента времени.\s
+                2.Исключить имеются ли сегменты с датой прилёта раньше даты вылета.
+                3.Исключить если общее время, проведённое на земле превышает два часа.""");
         int sortOption = scanner.nextInt();
         switch (sortOption) {
-            case (1) -> System.out.println(getSegmentsUpToCurrentTime(flightList));
-            case (2) -> System.out.println(arrivalDateBeforeDepartureDate(flightList));
-            case (3) -> System.out.println(totalTimeOnTheGroundExceedsTwoHours(flightList));
+            case (1) -> System.out.println(excludeSegmentsUpToCurrentTime(flightList));
+            case (2) -> System.out.println(excludeArrivalDateBeforeDepartureDate(flightList));
+            case (3) -> System.out.println(excludeTotalTimeOnTheGroundExceedsTwoHours(flightList));
             default -> System.out.println("Выбран неверный параметр");
         }
     }
 
-    public static List<Flight> totalTimeOnTheGroundExceedsTwoHours(List<Flight> flightList) {
+    public static List<Flight> excludeTotalTimeOnTheGroundExceedsTwoHours(List<Flight> flightList) {
         if (flightList.isEmpty()) {
             throw new IllegalArgumentException("");
         }
-        List<Flight> resultList = new ArrayList<>();
-        for (Flight flight : flightList) {
+        List<Flight> resultFlightList = new ArrayList<>(flightList);
+        Iterator<Flight> iterator = resultFlightList.iterator();
+        while (iterator.hasNext()) {
+            Flight flight = iterator.next();
             List<Segment> segments = flight.getSegments();
             long dateDiffInMinutes = 0;
             for (int i = 1; i < segments.size(); i++) {
@@ -44,35 +44,35 @@ public class Main {
                                 segments.get(i - 1).getArrivalDate(), segments.get(i).getDepartureDate());
             }
             if (dateDiffInMinutes > 120) {
-                resultList.add(flight);
+                iterator.remove();
             }
         }
-        return resultList;
+        return resultFlightList;
     }
 
-    public static List<Segment> arrivalDateBeforeDepartureDate(List<Flight> flightList) {
+    public static List<Flight> excludeArrivalDateBeforeDepartureDate(List<Flight> flightList) {
         if (flightList.isEmpty()) {
             throw new IllegalArgumentException("");
         }
-        List<Segment> resultList = new ArrayList<>();
-        flightList.stream()
-                .flatMap(segment -> segment.getSegments().stream())
-                .filter(element -> element.getDepartureDate().isAfter(element.getArrivalDate()))
-                .forEach(resultList::add);
-        return resultList;
+        List<Flight> resultFlightList = new ArrayList<>(flightList);
+        resultFlightList
+                .removeIf(flight -> flight.getSegments()
+                .stream()
+                .anyMatch(element -> element.getDepartureDate().isAfter(element.getArrivalDate())));
+        return resultFlightList;
     }
 
-    public static List<Segment> getSegmentsUpToCurrentTime(List<Flight> flightList) {
+    public static List<Flight> excludeSegmentsUpToCurrentTime(List<Flight> flightList) {
         if (flightList.isEmpty()) {
             throw new IllegalArgumentException("");
         }
-        List<Segment> resultList = new ArrayList<>();
+        List<Flight> resultFlightList = new ArrayList<>(flightList);
         LocalDateTime localDateTime = LocalDateTime.now();
-        flightList.stream()
-                .flatMap(segment -> segment.getSegments().stream())
-                .filter(element -> element.getDepartureDate().isBefore(localDateTime))
-                .forEach(resultList::add);
-        return resultList;
+        resultFlightList
+                .removeIf(flight -> flight.getSegments()
+                        .stream()
+                .anyMatch(element -> element.getDepartureDate().isBefore(localDateTime)));
+        return resultFlightList;
     }
 
 }
